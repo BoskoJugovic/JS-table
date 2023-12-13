@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table</title>
+  <style>
+    #js-div-input {
+      display: flex;
+      flex-direction: column; /* Center items horizontally */
+      align-items: center; /* Center items vertically */
+    }
+
+    #js-div-input, input {
+      margin: 2px;
+      padding: 5px;
+    }
+
+    button, select {
+      margin: 5px;
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    #js-div-search, #js-div-table, #js-div-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #js-div-table th, td{
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const data = [
+      {
+      "id": "1",
+      "brand": "Alfa Romeo",
+      "model": "155",
+      "year": "1992",
+      "fuel": "gasoline",
+      "price": 17471
+      },
+      {
+        "id": "2",
+        "brand": "Audi",
+        "model": "100",
+        "year": "1976",
+        "fuel": "gasoline",
+        "price": 13506
+      },
+      {
+        "id": "3",
+        "brand": "BMW",
+        "model": "730i",
+        "year": "2005",
+        "fuel": "gasoline",
+        "price": 92550
+      },
+      {
+        "id": "4",
+        "brand": "Citroen",
+        "model": "2CV 6 Special",
+        "year": "1970",
+        "fuel": "gasoline",
+        "price": 5241
+      }
+    ]
+
+      const keys = Object.keys(data[0])
+
+      let sortedBy = "id"
+      let orderByAsc = true
+
+      let pageNumber = 1
+      let pageSize = 5
+
+      let inputDiv = document.createElement("div")
+      inputDiv.id = "js-div-input"
+      document.body.append(inputDiv)
+
+      let searchDiv = document.createElement("div")
+      searchDiv.id = "js-div-search"
+      document.body.append(searchDiv)
+      
+      let paginationDiv = document.createElement("div")
+      paginationDiv.id = "js-div-pagination"
+      document.body.append(paginationDiv)
+
+      let tableDiv = document.createElement("div")
+      tableDiv.id = "js-div-table"
+      document.body.append(tableDiv)
+
+      document.getElementById("js-div-input").innerHTML = ""
+      keys.slice(1).map(key => {
+        document.getElementById("js-div-input").append(createInput(key))  
+      })
+      document.getElementById("js-div-input").append(createAddButton())
+
+      document.getElementById("js-div-search").innerHTML = ""
+      document.getElementById("js-div-search").append(createSearchInput())
+      document.getElementById("js-div-search").append(createClearButton())
+
+      document.getElementById("js-div-pagination").append(createPagination())
+
+      function createPagination() {
+        let table = document.createElement("table")
+        let tr = document.createElement("tr")
+        
+        let td1 = document.createElement("td")
+        let td2 = document.createElement("td")
+        let td3 = document.createElement("td")
+        let td4 = document.createElement("td")
+
+        let label = document.createElement("label")
+        label.id = "js-label-page"
+        
+        let buttonPrev = document.createElement("button")
+        buttonPrev.innerHTML = "&lt;"
+        buttonPrev.addEventListener("click", () => {
+          previousPage()
+        })
+        
+        let buttonNext = document.createElement("button")
+        buttonNext.innerHTML = "&gt;"
+        buttonNext.addEventListener("click", () => {
+          nextPage()
+        })
+
+        let select = document.createElement("select")
+        select.id = "js-select-page-size"
+        let option1 = document.createElement("option")
+        option1.innerHTML = 1
+        let option2 = document.createElement("option")
+        option2.innerHTML = 2
+        let option3 = document.createElement("option")
+        option3.innerHTML = 5
+        let option4 = document.createElement("option")
+        option4.innerHTML = 10
+
+        select.append(option1, option2, option3, option4)
+        select.addEventListener("change", () => {
+          updatePageSize(select.value)
+        })
+        td1.append(buttonPrev)
+        td2.append(label)
+        td3.append(buttonNext)
+        td4.append(select)
+
+        tr.append(td1, td2, td3, td4)
+        table.append(tr)
+
+        return table
+      }
+
+      function updatePageSize(value) {
+        pageSize = Number(value)
+        renderTable()
+      }
+
+      function previousPage() {
+        if (pageNumber > 1) {
+            pageNumber--
+        }
+        renderTable()
+      }
+
+      function nextPage() {
+          if (pageNumber < Math.ceil(data.length / pageSize)) {
+              pageNumber++
+          }
+          renderTable()
+      }
+
+      function paginateData(data) {
+        let from = (pageNumber - 1) * pageSize
+        let to = from + pageSize
+        return data.slice(from, to)
+      }
+
+      renderTable()
+     
+      function renderTable() {
+        document.getElementById("js-label-page").innerHTML = `${pageNumber} of ${Math.ceil(data.length / pageSize)}`
+        document.getElementById("js-select-page-size").value = pageSize
+
+        let filterValue = document.getElementById("js-input-search").value
+        let filterData = search(data, filterValue)
+
+        let sortedFilteredData = sortData(filterData)
+        let paginatedSortedFilteredData = paginateData(sortedFilteredData)
+
+
+        let Table = createTable(keys, paginatedSortedFilteredData)
+        document.getElementById("js-div-table").innerHTML = ""
+        document.getElementById("js-div-table").append(Table)
+      }
+
+      function createInput(key) {
+        let input = document.createElement("input")
+        input.id = `js-input-${key}`
+        input.placeholder = key
+        return input
+      }
+
+      function createAddButton() {
+        let button = document.createElement("button")
+        button.innerHTML = "Add"
+        button.addEventListener("click", () => {
+          addData()
+        })
+        return button
+      }
+     
+      function createTable(keys, data) {
+        let values = getValues(data)
+        let Table = document.createElement("table")
+        Table.border = 1
+        Table.style.borderCollapse = "collapse"
+        let Thead = document.createElement("thead")
+        Thead.append(createTheadRow(keys))
+        Table.append(Thead)
+        Table.append(createTbody(values))
+        return Table
+      }
+      
+      function createTheadRow(keys) {
+        let tr = document.createElement("tr")
+        tr.style.cursor = "pointer"
+        keys.map(key => {
+          tr.append(createTheadCell(key))
+        })
+        return tr
+      }
+      
+      function createTheadCell(name) {
+        let th = document.createElement("th")
+        if (sortedBy === name) {
+          th.innerHTML = name + (orderByAsc ? "&uarr;" : "&darr;")
+        } else {
+          th.innerHTML = name
+        }
+        th.addEventListener("click", () => {
+          orderBy(name)
+          renderTable()
+        })
+        return th
+      }
+    
+      function createTbody(values) {
+        let tbody = document.createElement("tbody")
+        values.forEach(value => {
+          tbody.append(createTbodyRow(value))
+        })
+        return tbody
+      }
+     
+      function createTbodyRow(values) {
+        let tr = document.createElement("tr")
+        let id = values[0]
+        tr.id = `js-tr-${id}`
+        tr.append(createTbodyIDCell(id))
+        values.slice(1).map((value, index) => {
+          tr.append(createTbodyCell(value, index, id))      
+        })
+        tr.append(createDeleteButton(id))
+        tr.addEventListener("mouseenter", () =>{
+          document.getElementById(`js-button-delete-${id}`).style.display = ""
+        })
+        tr.addEventListener("mouseleave", () =>{
+          document.getElementById(`js-button-delete-${id}`).style.display = "none"
+        })
+        return tr
+      }
+      
+      function createTbodyIDCell(value) {
+        let td = document.createElement("td")
+        td.innerHTML = value
+        return td
+      }
+    
+      function createTbodyCell(value, index, id) {
+        let td = document.createElement("td")
+        td.style.cursor = "pointer"
+        td.innerHTML = value
+        td.addEventListener("click", () => {
+          editTbodyCell(td, value, index, id)
+        })
+        return td
+      }
+      
+      function addData() {
+        let newData = {}
+        newData[keys.slice(0, 1)] = generateNextId()
+        keys.slice(1).forEach(key => {
+          newData[key] = document.getElementById(`js-input-${key}`).value
+        })
+        data.push(newData)
+        renderTable()
+      }
+      
+      function generateNextId() {
+        return data.length > 0 ? Number(getValues(data).slice(-1)[0][0]) + 1 : 1
+      }
+      
+      function getValues(data) {
+        return values = data.map(dataValue => {
+          return keys.map(value => dataValue[value])
+        })
+      }
+    
+      function editTbodyCell(cell, value, index, id) {
+        let inputElement = document.createElement("input")
+        inputElement.type = "text"
+        inputElement.value = value
+
+        cell.innerHTML = ""
+        cell.append(inputElement)
+
+        inputElement.focus()
+
+        let storedValue
+
+        inputElement.addEventListener("blur", () => {
+          storedValue = inputElement.value
+          saveData(id, storedValue, index)
+        })
+
+        inputElement.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            storedValue = inputElement.value
+            saveData(id, storedValue, index)
+          }
+        })
+      }
+      
+      function saveData(id, value, index) {
+        let key = keys[index + 1]
+        data.map(dataValue => {
+          if (id === dataValue["id"]) {
+            dataValue[key] = value
+        }
+      })
+      renderTable()
+      }
+      
+      function createDeleteButton(id) {
+        let deleteButton = document.createElement("button")
+        deleteButton.innerText = "Delete"
+        deleteButton.id = `js-button-delete-${id}`
+        deleteButton.style.display = "none"
+        deleteButton.addEventListener("click", () => {
+          deleteData(id)
+        })
+        return deleteButton
+      }
+   
+      function deleteData(id) {
+        data.map((dataValue, i) => {
+          if (id === dataValue["id"]) {
+            data.splice(i, 1)
+          }
+        })
+        renderTable()
+      }
+      
+      function createSearchInput() {
+        let input = document.createElement("input")
+        input.id = "js-input-search"
+        input.placeholder = "Search"
+        input.addEventListener("keyup", () => {
+          renderTable()
+        })
+        return input
+      }    
+
+      function createClearButton() {
+        let button = document.createElement("button")
+        button.innerHTML = "Clear"
+        button.addEventListener("click", () => {
+          document.getElementById("js-input-search").value = ""
+          renderTable()
+        })
+        return button
+      }
+
+      function search(data, searchValue) {
+        if (searchValue === "") {
+          return data
+        } else {
+          return data.filter(dataValue => {
+            let found = false
+            keys.map(key => {
+              if (String(dataValue[key]).toLowerCase().match(searchValue.toLowerCase())){
+                found = true
+              }
+            })
+            return found
+          })
+        }
+      }
+
+      function orderBy(name) {
+        if (sortedBy === name) {
+          orderByAsc = !orderByAsc
+        } else {
+          orderByAsc = true
+        }
+        sortedBy = name
+      }
+
+      function sortData(data) {
+        return data.sort((a, b) => {
+          let result = orderByAsc ? -1 : 1
+          // default value is -1
+          if (a[sortedBy] > b[sortedBy]) {
+            // if a > b, result is 1
+            result = -result
+            // meaning a should come after b
+          } else if (a[sortedBy] === b[sortedBy]) {
+            result = 0
+          }
+          return result
+        })
+      }
+    </script>
+    </body>
+</html>
